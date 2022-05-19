@@ -1,0 +1,219 @@
+---
+title: "Take-home Exercise 3"
+description: |
+  In this take-home exercise, I will explore (1) how the financial health of the residents change over the period, (2) how do wages compare to the overall cost of living, and (3) Are there groups appear to exhibit similar patterns
+    
+author:
+  - name: Huang Yaping
+    url: https://www.linkedin.com/in/huang-yp/
+    affiliation: School of Computing and Information Systems
+    affiliation_url: https://scis.smu.edu.sg/
+   
+date: "`r Sys.Date()`"
+output: 
+  distill::distill_article:
+    toc: True
+    toc_float: True
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+### Overview
+
+In this take-home exercise, appropriate *interactive* statistical graphics methods are used to analyze the financial health, wage and cost of living, groups with similar patterns. 
+
+### Getting Started
+
+The following R packages will be installed for this analysis: 
+1. [`ggiraph`](https://www.r-bloggers.com/2018/04/how-to-plot-with-ggiraph/): to make gglot graphics interactive 
+2. plotly: to plot interactive statistical graphs
+3. gganimate: it is ggplot extension to create animated statistical graphs
+4. patchwork: it is ggplot extension to combine multiple ggplot objects into a single figure
+5. DT: to provide an R interface to the JavaScript library DataTables that create interactive table on html page 
+6. tidyverse: a family of modern R packages specially designed to support data science, analysis and communication task including creating static statistical graphs. 
+7. ['Trelliscope'](https://hafen.github.io/trelliscopejs/index.html), a scalable, flexible, interactive approach to visualizing data. 
+
+The code chunk below will install and launch the above packages. 
+
+```{r}
+packages = c('tidyverse', 'ggiraph', 'plotly', 'DT', 
+             'patchwork', 'gganimate', 
+             'readxl', 'gifski','gapminder',
+             'trelliscopejs', 'dplyr')
+for (p in packages){
+  if(!require(p, character.only = T)){
+    install.packages(p) 
+  }
+  library(p, character.only = T)
+}
+```
+
+### Importing Data
+
+The original *financialJournal.csv* file is more than 70MB and is summarized using pivot table into *Financial_summary.csv* and *Monthly_summary.csv*. 
+
+The code chunk below:
+- import *Financial_summary.csv* and *Monthly_summary.csv* from the data sub folder
+- insert empty cells with value of 0
+- add new column summing all expenses as "All_expenses" with mutate()
+
+```{r}
+financial_summary <- read_csv("data/Financial_summary.csv")
+monthly_summary <- read_csv("data/Monthly_summary.csv")
+
+financial_summary[is.na(financial_summary)] <- 0
+financial_summary <- financial_summary %>%
+  mutate(All_expenses = -(Education+ Food + Recreation +
+                                         RentAdjustment + Shelter))
+```
+### 1. Plot Wage Distribution of All Participants using girafe()
+```{r}
+financial_summary$tooltip <- c(paste0(
+  "ID = ", financial_summary$ParticipantsId))
+
+p <- ggplot(data=financial_summary, aes(x = Wage)) +
+  geom_dotplot_interactive(
+    aes(tooltip = financial_summary$tooltip),
+    stackgroups = TRUE, 
+    binwidth = 800, 
+    method = "histodot") +
+  scale_y_continuous(NULL, 
+                     breaks = NULL)+
+  coord_cartesian(xlim = c(0, 150000),
+                                     ylim = NULL)+
+  labs(caption= 'Maority of the participants earns less than 50,000'
+  )+
+  geom_vline(aes(xintercept = median(Wage, na.rm =T)),
+             color = "red",
+             linetype = "dashed",
+             size = 0.5)+
+  annotate(x =28000, y = +Inf, label = 'Median Line', vjust = 2, geom = 'label' )+
+  ggtitle("Aggregated Wage Distribution for All Participants")+
+  theme(plot.title = element_text (hjust = 0.5))
+
+girafe(
+  ggobj = p,
+  width_svg = 8,
+  height_svg = 8*0.618
+)
+```
+### 2. Chart All Expenses Against Wage with ggplotly()
+```{r}
+p_saving <- ggplot(data = financial_summary,
+                   aes(x = Wage, y = All_expenses))+
+  geom_point(dotsize = 0.05)+
+  geom_smooth(method = lm, size =0.5)+
+  coord_cartesian(xlim = c(0, 150000), ylim = c(-5000, 30000))+
+  ylab("All Expenses")+
+  ggtitle("Aggregated Expenses vs Wage")+
+  theme(plot.title = element_text (hjust = 0.5))
+
+ggplotly(p_saving)
+ 
+```
+### 3. Chart on total saving with displaying multiple information on tooltip
+```{r}
+financial_summary$tooltip <- c(paste0(
+  "ID = ", financial_summary$ParticipantsId,
+  "\n Total saving: ", financial_summary$Grand_Total))
+
+p <- ggplot(data=financial_summary, aes(x = Grand_Total)) +
+  geom_dotplot_interactive(
+    aes(tooltip = financial_summary$tooltip),
+    stackgroups = TRUE, 
+    binwidth = 800, 
+    method = "histodot") +
+  scale_y_continuous(NULL, 
+                     breaks = NULL)+
+  coord_cartesian(xlim = c(0, 150000),ylim = NULL)+
+  xlab("Total Savings")+
+  ggtitle("Aggregated Total Saving for All Participants")+
+  theme(plot.title = element_text (hjust = 0.5))
+
+girafe(
+  ggobj = p,
+  width_svg = 8,
+  height_svg = 8*0.618
+)
+```
+### 4. Chart on all types of Expenses, Coordinated Multiple Views with ggiraph
+
+```{r}
+financial_summary$tooltip <- c(paste0(
+  "ID = ", financial_summary$ParticipantsId))
+
+p1 <- ggplot(data=financial_summary, 
+       aes(x = -Food)) +
+  geom_dotplot_interactive(              
+    aes(data_id = financial_summary$tooltip),              
+    stackgroups = TRUE,                  
+    binwidth = 50,                        
+    method = "histodot") +  
+  coord_cartesian(xlim=c(0,6000)) +
+  scale_y_continuous(NULL,               
+                     breaks = NULL)
+
+p2 <- ggplot(data=financial_summary, 
+       aes(x = -Shelter)) +
+  geom_dotplot_interactive(              
+    aes(data_id = financial_summary$tooltip),              
+    stackgroups = TRUE,                  
+    binwidth = 50,                        
+    method = "histodot") +  
+  coord_cartesian(xlim=c(0,6000)) +
+  scale_y_continuous(NULL,               
+                     breaks = NULL)
+
+girafe(code = print(p1 / p2),
+       width_svg = 8,
+       height_svg = 4,
+       options = list(
+         opts_hover(css = "fill: #202020;"),
+         opts_hover_inv(css = "opacity:0.2;")
+         )
+       )
+
+```
+
+### 5. Chart on Expenses Pattern vs Wage using highlight_key() to create coordinated scatter plot
+
+```{r}
+d <- highlight_key(financial_summary)
+p1 <- ggplot(data=d, 
+            aes(x = Wage,
+                y = Education)) +
+  geom_point(size=1) +
+  coord_cartesian(xlim=c(0,150000),
+                  ylim=c(-8000,0))
+
+p2 <- ggplot(data=d, 
+            aes(x = Wage,
+                y = Recreation)) +
+  geom_point(size=1) +
+  coord_cartesian(xlim=c(0,150000),
+                  ylim=c(-8000,0))+
+  ggtitle('Left: Education Expense vs Wage \nRight: Recreational Expense vs Wage')
+
+
+subplot(ggplotly(p1),
+        ggplotly(p2))
+
+```
+### 6. Interactive Data Table 
+```{r}
+d <- highlight_key(financial_summary)
+p <- ggplot(d, 
+            aes(Wage, 
+                All_expenses)) + 
+  geom_point(size=1) +
+  coord_cartesian(xlim=c(0,150000),
+                  ylim=c(4000,15000))
+gg <- highlight(ggplotly(p),
+                "plotly_selected")
+crosstalk::bscols(gg,
+                  DT::datatable(d),
+                  widths = 5)
+```
+

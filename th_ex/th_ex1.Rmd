@@ -1,0 +1,120 @@
+---
+title: "Take-home Exercise 1"
+description: |
+  In this Take-home exercise, I will explore demographic of the city of Engagement, Ohio USA by using appropriate static statistical graphics methods. The data should be processed by using appropriate [`tidyverse`](https://www.tidyverse.org/) family of packages and the statistical graphics must be prepared using [`ggplot2`](https://ggplot2.tidyverse.org/) and its extensions.
+
+author:
+  - name: Huang Yaping
+    url: https://www.linkedin.com/in/huang-yp/
+    affiliation: School of Computing and Information Systems
+    affiliation_url: https://scis.smu.edu.sg/
+date: "`r Sys.Date()`"
+output: 
+  distill::distill_article:
+    toc: true
+    toc_float: true
+  
+  
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# Overview
+
+In this take-home exercise, appropriate static statistical graphics methods are used to reveal the demographic of the city of Engagement, Ohio USA. 
+
+The data should be processed by using appropriate tidyverse family of packages and the statistical graphics must be prepared using ggplot2 and its extensions.
+
+# Getting Started
+
+Before we get started, it is important for us to ensure that the required R packages have been installed. If yes, we will load the R packages. If they have yet to be installed, we will install the R packages and load them onto R environment.
+
+The chunk code below will do the trick.
+
+```{r}
+packages = c('tidyverse', 'ggridges')
+
+for (p in packages){
+  if(!require(p, character.only = T)){
+    install.packages(p) 
+  }
+  library(p, character.only = T)
+}
+
+
+```
+
+# Importing Data
+
+The code chunk below import *Participants.csv*, *Jobs.csv *, *Apartments.csv* from the data sub folder into R by using [`read_csv()`](https://readr.tidyverse.org/reference/read_delim.html) of [**readr** ](https://readr.tidyverse.org/) packages and save them as tibble data frames called *participants_data*, *apartments_data*, and *jobs_data*. 
+
+```{r}
+participants_data <- read_csv("data/Participants.csv")
+jobs_data <- read_csv("data/Jobs.csv")
+
+```
+
+# Histogram Chart on Age vs haveKids
+
+The code chunk below plots a histogram chart by using geom_histogram of ggplot2. 
+
+```{r}
+ggplot(data = participants_data, 
+       aes(x = age, fill = haveKids)) +
+  geom_histogram(bins = 20)+
+  labs(x = "Age",
+       y = "No. of People",
+       title = " Age vs Have Kids or not")
+
+```
+
+# Bar Chart on Education Level
+
+The code chunk below plots a bar chart by using geom_bar of ggplot2. 
+
+```{r}
+ggplot(data = participants_data, 
+       aes(x = reorder(educationLevel, educationLevel, function(x)-length(x)))) +
+  geom_bar(fill = "lightblue")+
+  labs(x = "Education Level",
+       y = "Number of People",
+       title = "Most People Have High School or College Education")
+  
+```
+
+# Boxplot: Joviality vs Education level 
+
+The code chunk below plots a boxplot by using geom_boxplot of ggplot. 
+Please note that the data is ranked from high to low by reorder(). 
+
+```{r}
+ggplot(data = participants_data, 
+       aes( x =reorder(educationLevel, -joviality), y = joviality)) +
+  geom_boxplot()+
+  stat_summary(geom = "point",
+               fun = "mean",
+               colour = "red",
+               size = 2)+
+  labs( x = "Education Level",
+        y = "Joviality",
+        title = "Graduates are most jovial on average")
+
+```
+
+
+# Ridge Plot: Hourly Rate VS Education Level
+
+The code chunk below plots a ridge plot of ggridges. Please note that the data is ranked by reorder(). 
+
+```{r}
+
+ggplot(data = jobs_data,
+       aes(x = hourlyRate, y = reorder( educationRequirement, -hourlyRate))) +
+  geom_density_ridges(rel_min_height = 0.01)+
+  labs(x = "Hourly Rate",
+       y = "Education Requirement", 
+       title = "Graduates and Bachelors earn a higher hourly wage")
+
+```

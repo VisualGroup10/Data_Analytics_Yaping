@@ -1,0 +1,126 @@
+---
+title: "Take Home Exercise 4"
+description: |
+  
+  Take Home Exercise 4 is to reveal the daily routines of two selected participant of the city of Engagement, Ohio USA.  
+  [`ViSIElse`](https://cran.r-project.org/web/packages/ViSiElse/index.html), a graphical tool to visualize behavioural observations, and other appropriate visual analytics methods will be used. 
+  
+author:
+  - name: Huang Yaping
+    url: https://www.linkedin.com/in/huang-yp/
+    affiliation: School of Computing and Information Systems
+    affiliation_url: https://scis.smu.edu.sg/
+
+date: "`r Sys.Date()`"
+output: 
+  distill::distill_article:
+    toc: True
+    toc_float: True
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+### Loading R packages
+```{r}
+packages = c('scales', 'viridis', 
+             'lubridate', 'ggthemes', 
+             'gridExtra', 'tidyverse', 
+             'readxl', 'knitr',
+             'data.table', 'ViSiElse')
+
+for (p in packages){
+  if(!require(p, character.only = T)){
+    install.packages(p) 
+  }
+  library(p, character.only = T)
+}
+
+```
+## 1. Explore Recreatinal Pattern 
+### 1.1 Data Wrangling for Recreation Pattern Across Weekday and Hour
+##### Note: only the first 10 activity logs files are combined and analyzed here. 
+
+  logs_recreation <- read_csv("data/logs1_10.csv") %>% \n
+  select(timestamp, participantId, currentMode) %>% \n
+  filter(currentMode == "AtRecreation") %>% \n
+  mutate(wkdays = weekdays(ymd_hms(timestamp, quiet = TRUE))) %>% \n
+  mutate(hour = hour(ymd_hms(timestamp, quiet = TRUE))) %>% \n
+  count(wkdays, hour) %>% \n
+  ungroup() %>% \n
+  na.omit() \n
+
+  write_csv(logs_recreation,'data/logs_recreation.csv' )
+
+### 1.2. Plot Calendar Heat Map for Recreation Pattern 
+```{r}
+logs_recreation <- read_csv("data/logs_recreation.csv")
+ggplot(logs_recreation, aes(hour, wkdays, fill = n))+
+  geom_tile(color = "white", size = 0.1)+
+  theme_tufte(base_family = "Helvetica")+
+  coord_equal()+
+  scale_fill_gradient(name = "# of Recreation",
+                       low = "sky blue",
+                       high = "dark blue")+
+  labs(x = NULL, Y= NULL, 
+       title = "Recreation by Weekday and Time of the Day")+
+  theme(axis.ticks = element_blank(),
+      plot.title = element_text(hjust = 0.5),
+      legend.title = element_text(size = 8),
+      legend.text = element_text(size = 6) )
+
+```
+
+## 2. Visualizing Daily Life on 1 March 2022
+### 2.1 Data Wrangling for Recreation Pattern Across Weekday and Hour for participantId = 0
+
+logs_sleep <- read_csv("data/logs1_10.csv") %>% 
+  select(timestamp, participantId, sleepStatus) %>% 
+  filter (participantId == 0) %>% 
+  mutate(date = as.IDate(ymd_hms(timestamp, quiet = TRUE))) %>% 
+  mutate(minutes = hour(ymd_hms(timestamp))*60+minute(ymd_hms(timestamp))) %>% 
+  group_by(date, sleepStatus) %>% 
+  summarise(time = min(minutes)) %>% 
+  pivot_wider(names_from  = sleepStatus, values_from = time)
+
+logs_mode <- read_csv("data/logs1_10.csv") %>% 
+  select(timestamp, participantId, currentMode) %>% 
+  filter (participantId == 0) %>% 
+  mutate(date = as.IDate(ymd_hms(timestamp, quiet = TRUE))) %>% 
+  mutate(minutes = hour(ymd_hms(timestamp))*60+minute(ymd_hms(timestamp))) %>% 
+  group_by(date, currentMode) %>% 
+  summarise(time = min(minutes)) %>% 
+  pivot_wider(names_from  = currentMode, values_from = time)
+
+logs_hungry <- read_csv("data/logs1_10.csv") %>% 
+  select(timestamp, participantId, hungerStatus) %>% 
+  filter (participantId == 0) %>% 
+  mutate(date = as.IDate(ymd_hms(timestamp, quiet = TRUE))) %>% 
+  mutate(minutes = hour(ymd_hms(timestamp))*60+minute(ymd_hms(timestamp))) %>% 
+  group_by(date,hungerStatus) %>% 
+  summarise(time = min(minutes)) %>% 
+  pivot_wider(names_from  = hungerStatus, values_from = time)
+
+daily_life_p <- left_join(logs_sleep, logs_mode)
+daily_life <- left_join(daily_life_p, logs_hungry)
+write_csv(daily_life, "data/daily_life.csv")
+
+### 2.2 Plot Daily Routine for participantId = 0 with visielse()
+
+```{r}
+daily_life <- read_csv("data/daily_life.csv")
+visielse(daily_life)
+
+```
+
+### 2.3 Plot Daily Routine for participantId = 500 with visielse()
+
+##### Note that daily_life1.csv was created by using same code in 2.1 with participantId set to 500. 
+
+
+```{r}
+daily_life1 <- read_csv("data/daily_life1.csv")
+visielse(daily_life1)
+
+```

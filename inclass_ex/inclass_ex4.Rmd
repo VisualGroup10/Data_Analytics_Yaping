@@ -1,0 +1,59 @@
+---
+title: "In Class Exercise 4"
+description: |
+  A new article created using the Distill format.
+author:
+  - name: Huang Yaping
+    url: https://www.linkedin.com/in/huang-yp/
+    affiliation: School of Computing and Information Systems
+    affiliation_url: https://scis.smu.edu.sg/
+   
+date: "`r Sys.Date()`"
+output: 
+  distill::distill_article:
+    toc: true
+    toc_float: true
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+#, eval = TRUE, message = FALSE, warning = FALSE, fig.retina = 3)
+```
+
+## Getting started
+### Setting up for R packages
+
+To start with [ggstatplot](https://indrajeetpatil.github.io/ggstatsplot/) and tidyverse packahges will be launched using library().
+
+```{r}
+packages = c('tidyverse', 'ggstatsplot')
+
+for (p in packages){
+  if(!require(p, character.only = T)){
+    install.packages(p) 
+  }
+  library(p, character.only = T)
+}
+```
+
+## Importing data
+
+```{r}
+exam <- read_csv("data/Exam_data.csv")
+```
+
+## Working with ggstatplot 
+### ANOVA test
+
+```{r, fig.width=6, fig.height=8}
+ggbetweenstats(
+  data = exam, 
+  x = RACE, 
+  y = ENGLISH,
+  type = 'np'
+)
+```
+
+
+
