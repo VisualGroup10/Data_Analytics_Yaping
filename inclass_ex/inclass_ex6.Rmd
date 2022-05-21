@@ -1,0 +1,112 @@
+---
+title: "In Classe Exercise 6"
+description: |
+  A new article created using the Distill format.
+author:
+  - name: Nora Jones 
+    url: https://example.com/norajones
+    affiliation: Spacely Sprockets
+    affiliation_url: https://example.com/spacelysprokets
+date: "`r Sys.Date()`"
+output: distill::distill_article
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+### 1. Load necessary packages
+
+```{r}
+packages = c('tidyverse', 'sf', 'tmap', 'sftime', 'rmarkdown','lubridate', 'clock')
+for (p in packages){
+  if (!require(p, character.only = T)){
+    install.packages(p)
+  }
+  library(p, character.only = T)
+}
+
+```
+
+### 2. Load data
+
+```{r}
+schools <- read_sf("data/Schools.csv", 
+                   options = "GEOM_POSSIBLE_NAMES=location")
+pubs <- read_sf("data/Pubs.csv", 
+                options = "GEOM_POSSIBLE_NAMES=location")
+apartments <- read_sf("data/Apartments.csv", 
+                      options = "GEOM_POSSIBLE_NAMES=location")
+buildings <- read_sf("data/Buildings.csv", 
+                     options = "GEOM_POSSIBLE_NAMES=location")
+employers <- read_sf("data/Employers.csv", 
+                     options = "GEOM_POSSIBLE_NAMES=location")
+restaurants <- read_sf("data/Restaurants.csv", 
+                       options = "GEOM_POSSIBLE_NAMES=location")
+bldgs <- read_sf("data/Buildings.csv", 
+                 options = "GEOM_POSSIBLE_NAMES=location")
+
+```
+
+### 3. 
+
+```{r}
+tmap_mode("view")
+tm_shape(buildings)+
+tm_polygons(col = "grey60",
+           size = 1,
+           border.col = "black",
+           border.lwd = 1)
+tmap_mode("plot")
+
+```
+
+### 4. plot map with building and employers
+
+```{R}
+tmap_mode("plot")
+tm_shape(buildings)+
+tm_polygons(col = "grey60",
+           size = 1,
+           border.col = "black",
+           border.lwd = 1) +
+tm_shape(employers) +
+  tm_dots(col = "red")
+```
+
+```{R echo = FALSE, eval = FALSE}
+
+# Load data from participants status logs 1
+
+logs <- read_sf("data/ParticipantStatusLogs1.csv", 
+                options = "GEOM_POSSIBLE_NAMES=currentLocation")
+```
+
+
+```{R echo = FALSE, eval = FALSE }
+# select data to make a small dataset
+logs_selected <- logs%>% 
+  mutate(Timestamp = date_time_parse(timestamp,
+                                     zone = "",
+                                     format = "%Y-%m-%dT%H:%M:%S"))%>% 
+  mutate(day = get_day(Timestamp))%>% 
+  filter(currentMode == "Transport")
+
+```
+
+```{r echo = FALSE, eval = FALSE}
+#  save the small dataset
+
+write_rds(logs_selected, "data/logs_selected.rds")
+```
+
+
+### 8. hex
+
+```{r}
+hex <- st_make_grid(buildings,
+                    cellsize = 100,
+                    square = FALSE) %>% 
+  st_sf() %>% 
+  rowid_to_column("hex_id")
+plot(hex)
+```

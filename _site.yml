@@ -29,6 +29,8 @@ navbar:
       menu:
       - text: "In-class Exercise 4"
         href: "inclass_ex/inclass_ex4.html"
+      - text: "In-class Exercise 6"
+        href: "inclass_ex/inclass_ex6.html"
 
   right:
     - text: "Home"
