@@ -1,0 +1,194 @@
+---
+title: "In class exercise 7 - Network Analysis"
+description: |
+  A new article created using the Distill format.
+author:
+  - name: Huang Yaping
+    url: https://www.linkedin.com/in/huang-yp/
+    affiliation: School of Computing and Information Systems
+    affiliation_url: https://scis.smu.edu.sg/
+date: "`r Sys.Date()`"
+output: distill::distill_article
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, eval = TRUE, message = FALSE, warning = FALSE)
+```
+
+### Install packages
+```{R}
+packages = c('igraph', 'tidygraph', 'ggraph', 'visNetwork', 'lubridate', 'clock',
+             'tidyverse', 'ggmap')
+for(p in packages){
+  if(!require(p, character.only = T)){
+    install.packages(p)
+  }
+  library(p, character.only = T)
+}
+
+```
+### Read files
+```{r}
+GAStech_nodes <- read_csv("data/GAStech_email_node.csv")
+GAStech_edges <- read_csv("data/GAStech_email_edge-v2.csv")
+
+glimpse(GAStech_edges)
+
+```
+### Data Wrangling
+
+```{r}
+GAStech_edges$SentDate  = dmy(GAStech_edges$SentDate)
+GAStech_edges$Weekday = wday(GAStech_edges$SentDate, 
+                             label = TRUE, 
+                             abbr = FALSE)
+```
+
+
+### Best Practise for Data Wrangling
+```{r echo = FALSE, eval = FALSE, message = FALSE, warning = FALSE }
+GAStech_edges <- GAStech_edges %>% 
+  mutate(SentDate = dmy(SentDate)) %>% 
+  mutate(Weekday = wday(SentDate))
+
+```
+
+### Aggregating the record 
+```{r}
+GAStech_edges_aggregated <- GAStech_edges %>% 
+  filter(MainSubject == "Work related") %>% 
+  group_by(source, target, Weekday) %>% 
+  summarise(Weight = n()) %>% 
+  filter(source != target) %>% 
+  filter(Weight > 1) %>% 
+  ungroup
+
+```
+### Build graph model 
+```{r}
+GAStech_graph <- tbl_graph(nodes = GAStech_nodes,
+                           edges = GAStech_edges_aggregated,
+                           directed = TRUE)
+
+GAStech_graph
+```
+
+### Construct graph
+```{R}
+# layout = "stress"
+set.seed(123)
+ggraph(GAStech_graph,
+       layout = "fr")+
+  geom_edge_link()+
+  geom_node_point(size = 5)+
+  theme_graph()
+
+```
+
+
+### Modifying the nodes
+```{R}
+ggraph(GAStech_graph,
+       layout = "stress")+
+  geom_edge_link()+
+  geom_node_point(aes(colour = Department,
+                      size = 3))+
+  theme_graph()
+```
+
+
+### Modifying edges
+```{R}
+ggraph(GAStech_graph,
+       layout = "stress")+
+  geom_edge_link(aes(width = Weight, 
+                     alpha = 0.2))+
+  scale_edge_width(range=c(0.1, 5))+
+  geom_node_point(aes(colour = Department,
+                      size = 3))+
+  theme_graph()
+```
+
+
+### working with facet_edge()
+```{R}
+ggraph(GAStech_graph,
+       layout = "stress")+
+  geom_edge_link(aes(width = Weight, 
+                     alpha = 0.2))+
+  scale_edge_width(range=c(0.1, 5))+
+  geom_node_point(aes(colour = Department,
+                      size = 0.6))+
+  theme_graph()+
+  facet_edges(~Weekday)
+```
+
+
+### working with facet_node()
+```{R}
+ggraph(GAStech_graph,
+       layout = "stress")+
+  geom_edge_link(aes(width = Weight, 
+                     alpha = 0.2))+
+  scale_edge_width(range=c(0.1, 5))+
+  geom_node_point(aes(colour = Department,
+                      size = 0.6))+
+  theme_graph()+
+  facet_nodes(~Department)
+```
+
+### working with centrality metric
+```{R}
+GAStech_graph %>% 
+  mutate(betweenness_centrality = centrality_betweenness()) %>% 
+  ggraph(layout = "stress")+
+  geom_edge_link(aes(width = Weight, 
+                     alpha = 0.2))+
+  scale_edge_width(range=c(0.1, 5))+
+  geom_node_point(aes(colour = Department,
+                      size = betweenness_centrality))+
+  theme_graph()
+```
+
+### working with visNetwork - data preparation
+```{R}
+GAStech_edges_aggregated <- GAStech_edges %>%
+  left_join(GAStech_nodes, by = c("sourceLabel" = "label")) %>%
+  rename(from = id) %>%
+  left_join(GAStech_nodes, by = c("targetLabel" = "label")) %>%
+  rename(to = id) %>%
+  filter(MainSubject == "Work related") %>%
+  group_by(from, to) %>%
+    summarise(weight = n()) %>%
+  filter(from!=to) %>%
+  filter(weight > 1) %>%
+  ungroup()
+
+```
+
+### visNetwork
+
+```{R}
+visNetwork(GAStech_nodes, 
+           GAStech_edges_aggregated) %>% 
+  visIgraphLayout(layout = "layout_with_fr")
+
+```
+### Rename columns
+```{R}
+GAStech_nodes <- GAStech_nodes %>% 
+  rename(group = Department)
+
+```
+
+### With Legend
+
+```{R}
+
+  visNetwork(GAStech_nodes, GAStech_edges_aggregated) %>% 
+  visIgraphLayout(layout = "layout_with_fr") %>% 
+  visLegend() %>% 
+  visLayout(randomSeed = 1234)
+```
+
+
