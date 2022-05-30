@@ -1,0 +1,143 @@
+---
+title: "Take Home Exercise 5 - GeoVisual Analysis"
+description: |
+  This exercise is to visualise and analyse geographic and movement Data, including: 
+  - social areas of the city of Engagement, Ohio USA.
+  - visualising and analysing locations with traffic bottleneck of the city of Engagement, Ohio USA.
+author:
+  - name: Huang Yaping
+    url: https://www.linkedin.com/in/huang-yp/
+    affiliation: School of Computing and Information Systems
+    affiliation_url: https://scis.smu.edu.sg/
+        
+date: "`r Sys.Date()`"
+output: distill::distill_article
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+### 1. Load necessary packages
+
+```{r}
+packages = c('tidyverse', 'sf', 'tmap', 'sftime', 'rmarkdown','lubridate', 'clock')
+for (p in packages){
+  if (!require(p, character.only = T)){
+    install.packages(p)
+  }
+  library(p, character.only = T)
+}
+```
+
+### 2. Load data for Buidlings, Pubs, Restaurants and Empoyers
+
+```{r}
+pubs <- read_sf("data/th_5_data/Pubs.csv", 
+                options = "GEOM_POSSIBLE_NAMES=location")
+employers <- read_sf("data/th_5_data/Employers.csv", 
+                     options = "GEOM_POSSIBLE_NAMES=location")
+restaurants <- read_sf("data/th_5_data/Restaurants.csv", 
+                       options = "GEOM_POSSIBLE_NAMES=location")
+bldgs <- read_sf("data/th_5_data/Buildings.csv", 
+                 options = "GEOM_POSSIBLE_NAMES=location")
+```
+
+### 3. Plot Map of Pubs, Restaurants, and Employers on Buildings
+
+```{r}
+tmap_mode("plot")
+tm_shape(bldgs)+
+tm_polygons(col = "grey60",
+           size = 1,
+           border.col = "black",
+           border.lwd = 1) +
+tm_shape(pubs)+
+  tm_dots(col = "red",
+          size = 0.15)+
+tm_shape(restaurants)+
+  tm_dots(col = "yellow",
+          size = 0.15)+
+tm_shape(employers)+
+  tm_dots(col = "blue",
+          size = 0.15)
+  
+```
+
+### 4. Load data of CheckinJournal, data wrangling
+
+```{r eval = FALSE}
+Number_of_Visits <- read_csv("data/th_5_data/CheckinJournal.csv")
+
+Number_of_Visits <- Number_of_Visits %>% 
+  filter (venueType == "Pub" | venueType == "Restaurant" | venueType == "Workplace") %>% 
+  group_by (venueId) %>% 
+  mutate(count = n()) %>% 
+  select(venueId, count) %>% 
+  distinct() %>% 
+  mutate(venueId = as.character(venueId))
+write_rds(Number_of_Visits, "data/rds/Number_of_Visits.rds")
+```
+#### 4.1. Join pub, restaurants, employers with the No. of visits
+
+```{r}
+Number_of_Visits <- read_rds("data/rds/Number_of_Visits.rds")
+
+pub_visits <- pubs %>% 
+  left_join(Number_of_Visits,
+            by = c("pubId" = "venueId"))
+write_rds(pub_visits, 
+          "data/rds/pub_visits.rds")
+
+restaurant_visits <- restaurants %>% 
+  left_join(Number_of_Visits, 
+            by = c("restaurantId" ="venueId"))
+write_rds(restaurant_visits,
+          "data/rds/restaurant_visits.rds")
+
+employer_visits<- employers %>% 
+  left_join(Number_of_Visits, 
+            by = c("employerId" ="venueId"))
+write_rds(employer_visits,
+          "data/rds/employer_visits.rds")
+```
+
+### 5. Visualize the No. of visits to pubs
+
+```{r}
+tmap_mode("plot")
+tm_shape(bldgs)+
+tm_polygons(col = "grey60",
+           size = 1,
+           border.col = "black",
+           border.lwd = 1) +
+tm_shape(pub_visits)+
+  tm_dots(col = "red",
+          size = "count")
+```
+### 6. Visualize the No. of visits to restaurants
+
+```{r}
+tmap_mode("plot")
+tm_shape(bldgs)+
+tm_polygons(col = "grey60",
+           size = 1,
+           border.col = "black",
+           border.lwd = 1) +
+tm_shape(restaurant_visits) +
+  tm_bubbles(col = "yellow",
+             size="count")
+```
+### 7. Visualize the No. of visits to employers
+
+```{r}
+tmap_mode("plot")
+tm_shape(bldgs)+
+tm_polygons(col = "grey60",
+           size = 1,
+           border.col = "black",
+           border.lwd = 1) +
+tm_shape(employer_visits) +
+  tm_bubbles(col = "blue",
+             size="count")
+```
