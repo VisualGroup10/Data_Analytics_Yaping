@@ -1,0 +1,172 @@
+---
+title: "Take-home Exercise 6: Visualising and Analysing Community Network"
+description: |
+  This exercise is to find out the patterns in the social networks in the town, and describe ten significant patterns observed. 
+author:
+  - name: Huang Yaping
+    url: https://www.linkedin.com/in/huang-yp/
+    affiliation: School of Computing and Information Systems
+    affiliation_url: https://scis.smu.edu.sg/
+date: "`r Sys.Date()`"
+output: 
+  distill::distill_article:
+    toc: true
+    toc_float: true
+  
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+### Install packages
+```{R}
+packages = c('igraph', 'tidygraph', 'ggraph', 'visNetwork', 'lubridate', 'clock','tidyverse', 'ggmap')
+for(p in packages){
+  if(!require(p, character.only = T)){
+    install.packages(p)
+  }
+  library(p, character.only = T)
+}
+
+```
+
+### Read small files
+```{r}
+participants <- read_csv("data/Participants.csv")
+```
+
+### Read big files; Data Wrangling to Aggregate the edges with weekdays, for August 2022, with weight > 3
+```{r eval = FALSE}
+Edges <- read_csv("data/SocialNetwork.csv")
+Edges_summary_weekdays <- Edges %>% 
+  mutate(date = ymd(timestamp)) %>% 
+  mutate(weekday = wday(date, label= TRUE, abbr = FALSE)) %>% 
+  mutate(month = month(date)) %>% 
+  filter(month == 8) %>% 
+  group_by(participantIdFrom, participantIdTo, weekday) %>% 
+  summarise(Weight = n()) %>% 
+  filter(participantIdFrom != participantIdTo) %>% 
+  filter(Weight>3) %>% 
+  ungroup 
+write_rds(Edges_summary_weekdays, "data/rds/Edges_summary_weekdays.rds")
+```
+### Data Wrangling to derive Edges and Nodes on Monday
+```{r}
+Edges_summary_weekdays <- read_rds("data/rds/Edges_summary_weekdays.rds")
+
+Edges_Mon <- Edges_summary_weekdays %>% 
+  filter(weekday == "Monday")
+
+write_rds(Edges_Mon, "data/rds/Edges_Mon.rds")
+```
+
+```{r}
+Nodes_Mon <- data.frame(unique(unlist(Edges_Mon[1], Edges_Mon[2])))
+colnames(Nodes_Mon)[1] <- "id"
+```
+
+```{r}
+Nodes_Mon <- Nodes_Mon %>% 
+  left_join(participants, by = c("id" = "participantId"))
+```
+
+### Build graph model for Monday
+
+graph_from_data_frame() of igraph is used to covert the nodes and edges data.frame into an igraph file format. as_tbl_graph() converts network data and objects to a tidygraph data model.
+
+```{r}
+graph_Mon <- graph_from_data_frame(Edges_Mon,
+                                   vertices = Nodes_Mon) %>% 
+  as_tbl_graph()
+
+graph_Mon
+```
+
+### Construct a basic network graph On Mondays of August
+To reveal the relationship of education vs connectedness 
+
+ggraph is an extension of the ggplot2 API tailored to graph visualizations and provides the same flexible approach to building up plots layer by layer.
+
+```{R}
+set.seed(123)
+ggraph(graph_Mon,
+       layout = "fr")+
+  geom_edge_link()+
+  geom_node_point(aes(colour = educationLevel))+
+  facet_nodes(~educationLevel)+
+  theme_graph()+
+  ggtitle("Network Map on Monday of August - Education")
+```
+Note: the above network shows that low education residents are sparsely connected. 
+
+### Construct a basic network graph On Mondays of August
+To reveal the relationship of interest group vs connectedness 
+
+```{R}
+set.seed(123)
+ggraph(graph_Mon,
+       layout = "fr")+
+  geom_edge_link()+
+  geom_node_point(aes(colour = interestGroup))+
+  facet_nodes(~interestGroup)+
+  theme_graph()+
+  ggtitle("Network Map on Monday of August - Interest Group")
+```
+Observation: interest group B, C, D, and J shows activities on Monday. 
+
+### Data Wrangling to derive Edges and Nodes on Sunday
+```{r}
+Edges_Sun <- Edges_summary_weekdays %>% 
+  filter(weekday == "Sunday")
+```
+
+```{r}
+Nodes_Sun <- data.frame(unique(unlist(Edges_Sun[1], Edges_Sun[2])))
+colnames(Nodes_Sun)[1] <- "id"
+```
+
+```{r}
+Nodes_Sun <- Nodes_Sun %>% 
+  left_join(participants, by = c("id" = "participantId"))
+```
+
+### Build graph model for Sunday
+```{r}
+graph_Sun <- graph_from_data_frame(Edges_Sun,
+                                   vertices = Nodes_Sun) %>% 
+  as_tbl_graph()
+
+graph_Sun
+```
+### Construct network graph On Sundays of August for people with and without kids
+To find out how kids status impact how people are connnected on Sunday
+
+```{R}
+set.seed(123)
+ggraph(graph_Sun,
+       layout = "fr")+
+  geom_edge_link()+
+  geom_node_point(aes(colour = haveKids))+
+  facet_nodes(~haveKids)+
+  theme_graph()+
+  ggtitle("Network Map on Sunday of August - With kids vs Without Kids")
+```
+Observation: it can be seen that people with kids are less connected on Sunday. 
+
+### Construct an interest group network graph On Sundays of August
+To find out how people in different interest groups are connected. 
+
+```{R}
+set.seed(123)
+ggraph(graph_Sun,
+       layout = "fr")+
+  geom_edge_link()+
+  geom_node_point(aes(colour = interestGroup))+
+  facet_nodes(~interestGroup)+
+  theme_graph()+
+  ggtitle("Network Map on Sunday of August - Interest Group")
+```
+Observation: it can be seen that the interest groups are slightly more connected on Sunday compared to Monday, espciallu group A. 
+
+

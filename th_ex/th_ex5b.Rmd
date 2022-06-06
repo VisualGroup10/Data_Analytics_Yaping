@@ -1,0 +1,79 @@
+---
+title: "Take Home Exercise 5b - GeoVisual Analysis"
+description: |
+  This exercise is to visualise and analyse locations with traffic bottleneck of the city of Engagement, Ohio USA.
+author:
+  - name: Huang Yaping
+    url: https://www.linkedin.com/in/huang-yp/
+    affiliation: School of Computing and Information Systems
+    affiliation_url: https://scis.smu.edu.sg/
+        
+date: "`r Sys.Date()`"
+output: distill::distill_article
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+### 1. Load necessary packages
+
+```{r}
+packages = c('tidyverse', 'sf', 'tmap', 'sftime', 'rmarkdown','lubridate', 'clock')
+for (p in packages){
+  if (!require(p, character.only = T)){
+    install.packages(p)
+  }
+  library(p, character.only = T)
+}
+```
+
+### 2. Load data for Buidlings
+
+```{r}
+bldgs <- read_sf("data/th_5_data/Buildings.csv", 
+                 options = "GEOM_POSSIBLE_NAMES=location")
+```
+
+### 3. Load data for Activity log 1 
+
+```{r eval=FALSE}
+logs1 <- read_sf("data/th_5_data/ParticipantStatusLogs1.csv", 
+                 options = "GEOM_POSSIBLE_NAMES=location")
+
+```
+
+### 4. Data wrangling
+
+```{r eval=FALSE}
+
+logs_selected <- logs1 %>%
+  mutate(Timestamp = date_time_parse(timestamp,
+                zone = "",
+                format = "%Y-%m-%dT%H:%M:%S")) %>%
+  mutate(day = get_day(Timestamp)) %>%
+  filter(currentMode == "Transport")
+
+```
+
+### 5. Plots paths
+
+```{r}
+tmap_mode("plot")
+tm_shape(buildings)+
+tm_polygons(col = "grey60",
+           size = 1,
+           border.col = "black",
+           border.lwd = 1) +
+tm_shape(logs_selected) +
+  tm_dots(col = "red") 
+tmap_mode("plot")
+
+```
+
+### 6. Plots paths
+
+```{r}
+
+
+```

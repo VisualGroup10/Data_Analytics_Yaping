@@ -17,8 +17,7 @@ knitr::opts_chunk$set(echo = TRUE, eval = TRUE, message = FALSE, warning = FALSE
 
 ### Install packages
 ```{R}
-packages = c('igraph', 'tidygraph', 'ggraph', 'visNetwork', 'lubridate', 'clock',
-             'tidyverse', 'ggmap')
+packages = c('igraph', 'tidygraph', 'ggraph', 'visNetwork', 'lubridate', 'clock','tidyverse', 'ggmap')
 for(p in packages){
   if(!require(p, character.only = T)){
     install.packages(p)
@@ -62,6 +61,7 @@ GAStech_edges_aggregated <- GAStech_edges %>%
   filter(source != target) %>% 
   filter(Weight > 1) %>% 
   ungroup
+
 
 ```
 ### Build graph model 
